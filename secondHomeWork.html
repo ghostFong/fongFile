@@ -16,7 +16,7 @@
   width: 100%;
   padding: 10px;
   text-align: center;
-  color: #ffff00
+  color: #ff0f00
 }
 
 body {
@@ -32,7 +32,7 @@ body {
 //var puck;
 var pucks = [];
 var walls = [];
-var vel, pos, force;
+//var vel, pos, force;
 var puckLight;
 var puckRadius = 8;
 var dt = 0.2;
@@ -49,7 +49,7 @@ class ThreeCoordinate{
 
 class Puck {
     constructor(position, size, color){
-        this.puckLight = new THREE.PointLight(color, 3, 200);
+        this.puckLight = new THREE.PointLight(color, 2, 150);
         this.obj = new THREE.Mesh(new THREE.CylinderGeometry(size.x, size.x, size.y, size.z), new THREE.MeshBasicMaterial({color}));
         scene.add(this.obj);
         this.obj.position.y = size.y / 2;
@@ -133,10 +133,10 @@ function init() {
   //light.position.set( 50, 50, 50 );
   //scene.add( puckLight );
   
-  
+  /*
   puckAmbient = new THREE.AmbientLight( 0x202020 ); // soft white light
   scene.add( puckAmbient );
-  
+  */
   
   ////////////////////////////////////////////////////////////////
   //var gridXZ = new THREE.GridHelper(200, 20, 'red', 'white');
@@ -152,7 +152,7 @@ function init() {
   scene.add(floor);
   floor.rotation.x = -Math.PI/2;
   
-  
+  //創建物件
   pucks = [
     new Puck(new ThreeCoordinate(0, 0, 0), new ThreeCoordinate(puckRadius, 4, 16), 0xdb80ff),
     new Puck(new ThreeCoordinate(80, 0, 0), new ThreeCoordinate(puckRadius, 4, 16), 0xb7f707),
@@ -253,7 +253,7 @@ function animate() {
     puck.obj.position.copy(puck.pos);
     puck.obj.position.y += 4;
     puck.puckLight.position.copy(puck.pos);
-    puck.puckLight.position.y += 8;
+    puck.puckLight.position.y += 10;
   }
   
   for(i=0; i<walls.length; i++){
