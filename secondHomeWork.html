@@ -1,13 +1,23 @@
 <html>
-<div id="tital">第二次作業</div>
+<div id="tital">第二次作業
+<br>背景音樂 (<a href="javascript:toggle();">音量控制</a>)<br>
+<button id="play" style="width:20%">Play</button> 
+</div>
 <script src="https://threejs.org/build/three.min.js"></script>
 <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
 <audio id="wallSound" style="display:none">
 <source src="https://ghostfong.github.io/fongFile/wallSound.wav" type='audio/wav'>
 </audio>
 <audio id="puckSound" style="display:none">
 <source src="https://ghostfong.github.io/fongFile/puckSound.wav" type='audio/wav'>
 </audio>
+<audio id="soundtrack" autoplay loop style="display:none">
+<source src="https://ghostfong.github.io/fongFile/Death_Match.mp3"  type='audio/mp3'>
+</audio>
+
 <head>
 <style>
 #tital {
@@ -27,9 +37,22 @@ body {
 <script>
 
 
-
+$('#play').click ( function() {
+	isPaused = !isPaused;
+	if (isPaused) { 
+		$('#play').text ('Play')
+		soundTrack.pause()
+	} else {
+		$('#play').text ('Pause')
+		soundTrack.play()
+	}
+});
 //var camera, scene, renderer;
 //var puck;
+var isDimming = false, soundVal = 1.0, sign = 1.0;
+var isPaused = false;
+
+var wallSound, puckSound, soundTrack;
 var pucks = [];
 var walls = [];
 //var vel, pos, force;
@@ -116,8 +139,17 @@ class Wall {
 init();
 animate();
 
+function toggle() {
+	isDimming = !isDimming;
+	sign = isDimming ? -1 : 1;
+}
+
+
 function init() {
 
+  collisionSound = document.getElementById ('collisionsound');
+  soundTrack = document.getElementById ('soundtrack');
+	
   scene = new THREE.Scene();
 
   renderer = new THREE.WebGLRenderer();
@@ -172,7 +204,7 @@ function init() {
   scene.add(puck);
   */
   //造牆
-  var cube = new THREE.BoxGeometry(10, 20, 200);
+  //var cube = new THREE.BoxGeometry(10, 20, 200);
   
   walls = [
     new Wall(new ThreeCoordinate(-105, 30, 0), new ThreeCoordinate(10, 60, 220)),
@@ -216,6 +248,10 @@ function init() {
 
 function animate() {
   
+  
+  soundVal += sign*0.01;
+  soundVal = THREE.Math.clamp (soundVal, 0, 1);
+  soundtrack.volume = soundVal;
   /*
   var dt = 0.1;
   var eps = 1e-3;
