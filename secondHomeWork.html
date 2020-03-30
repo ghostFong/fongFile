@@ -50,7 +50,7 @@ $('#play').click ( function() {
 //var camera, scene, renderer;
 //var puck;
 var isDimming = false, soundVal = 1.0, sign = 1.0;
-var isPaused = false;
+var isPaused = true;
 
 var wallSound, puckSound, soundTrack;
 var pucks = [];
@@ -72,7 +72,7 @@ class ThreeCoordinate{
 
 class Puck {
     constructor(position, size, color){
-        this.puckLight = new THREE.PointLight(color, 2, 150);
+        this.puckLight = new THREE.PointLight(color, 3, 120);
         this.obj = new THREE.Mesh(new THREE.CylinderGeometry(size.x, size.x, size.y, size.z), new THREE.MeshBasicMaterial({color}));
         scene.add(this.obj);
         this.obj.position.y = size.y / 2;
@@ -130,7 +130,7 @@ class Wall {
         this.normal = new THREE.Vector3(-1*tmpPosition/Math.abs(tmpPosition), 0, 0);
     }else{
       this.point = new THREE.Vector3(0, 0, tmpPosition);
-      this.normal = new THREE.Vector3(0, 0, -1*tmpPosition/Math.abs(tmpPosition	));
+      this.normal = new THREE.Vector3(0, 0, -1*tmpPosition/Math.abs(tmpPosition));
     }  
     scene.add(this.obj);
   }
@@ -161,6 +161,7 @@ function init() {
   //camera.position.z = 500;
   let controls = new THREE.OrbitControls(camera, renderer.domElement);
   camera.position.set(0, 120, 300);
+  
   //puckLight = new THREE.PointLight( 0xdb80ff, 1, 300 );
   //light.position.set( 50, 50, 50 );
   //scene.add( puckLight );
@@ -187,9 +188,9 @@ function init() {
   //創建物件
   pucks = [
     new Puck(new ThreeCoordinate(0, 0, 0), new ThreeCoordinate(puckRadius, 4, 16), 0xdb80ff),
-    new Puck(new ThreeCoordinate(80, 0, 0), new ThreeCoordinate(puckRadius, 4, 16), 0xb7f707),
-    new Puck(new ThreeCoordinate(-50, 0, -50), new ThreeCoordinate(puckRadius, 4, 16), 0xf51414),
-    new Puck(new ThreeCoordinate(80, 0, -30), new ThreeCoordinate(puckRadius, 4, 16), 0xffc830),
+    new Puck(new ThreeCoordinate(70, 0, 0), new ThreeCoordinate(puckRadius, 4, 16), 0xb7f707),
+    new Puck(new ThreeCoordinate(-20, 0, -25), new ThreeCoordinate(puckRadius, 4, 16), 0xf51414),
+    new Puck(new ThreeCoordinate(90, 0, -30), new ThreeCoordinate(puckRadius, 4, 16), 0xffc830),
     new Puck(new ThreeCoordinate(-40, 0, 20), new ThreeCoordinate(puckRadius, 4, 16), 0x1a17bf),
     new Puck(new ThreeCoordinate(-60, 0, 10), new ThreeCoordinate(puckRadius, 4, 16), 0x52ebff),
     new Puck(new ThreeCoordinate(50, 0, -50), new ThreeCoordinate(puckRadius, 4, 16), 0xff9d52)
@@ -299,7 +300,7 @@ function animate() {
         collision = puck.calculateWall(wall);
         if(collision){
             document.getElementById('wallSound').play();
-            // console.log('collision wall');
+            //console.log('collision wall');
         }
     }
   }
