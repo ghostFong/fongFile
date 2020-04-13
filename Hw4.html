@@ -49,8 +49,15 @@ $('#play').click(function() {
     soundTrack.play()
   }
 });
+//toggle
+function toggle() {
+	isDimming = !isDimming;
+	sign = isDimming ? -1 : 1;
+}
+//endToggle
 //var camera, scene, renderer;
 //var puck;
+var soundTrack;
 var isDimming = false, soundVal = 1.0, sign = 1.0;
 var isPaused = true;
 //////////////////
@@ -61,6 +68,8 @@ var rolesRound = 0;
 var head, torso;
 var rightUpperArm, rightLowerArm, leftUpperArm, leftLowerArm;
 var rightUpperLeg, rightLowerLeg, leftUpperLeg, leftLowerLeg;
+
+var isPaused = false;
 
 var gcontrol;
 ///////
@@ -108,11 +117,6 @@ $('#switch').click ( function () {
   if (useGyro) $('#switch').text ('changeGyroMode')
   else $('#switch').text ('changeNormalMode')
 })
-////
-function toggle() {
-	isDimming = !isDimming;
-	sign = isDimming ? -1 : 1;
-}
 /////
 init();
 animate();
@@ -120,7 +124,9 @@ animate();
 function init() {
 
   scene = new THREE.Scene();
-
+  //music
+  soundTrack = document.getElementById('soundtrack');
+  soundTrack.volume = 0.7;
   renderer = new THREE.WebGLRenderer();
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setClearColor(0x888888);
@@ -332,6 +338,10 @@ function keyframe(t) {
 }
 
 function animate() {
+	
+	soundVal += sign*0.01;
+  	soundVal = THREE.Math.clamp (soundVal, 0, 1);
+ 	soundtrack.volume = soundVal;
 	//head.rotation.y = Math.PI/6;
 	keyframe(clock.getElapsedTime());
 	
