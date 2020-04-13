@@ -1,0 +1,372 @@
+<html>
+    <script src="https://threejs.org/build/three.min.js"></script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js">
+    <!--使用音樂引用-->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/108/three.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <!--音樂引用end-->
+    <script src="https://raw.githack.com/mrdoob/three.js/dev/examples/js/misc/Gyroscope.js"></script>
+    <!--要自動行走加入此行 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
+    <!--放行進曲音樂-->
+    <audio id="soundtrack" autoplay loop style="display:none">
+    <source src="https://ghostfong.github.io/fongFile/moveMusic.wav"  type='audio/WAV'>
+    </audio>
+    <div id="info">第三次作業
+    <button id="play" style="width:20%">Pause</button>
+    <button id="switch" style="width:20%">changeGyroMode</button>
+    </div>
+<head> 
+<style>
+#info {
+  position: absolute;
+  top: 0px;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  color: #ffff00
+}
+#gui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+ //   height: 350px;
+}
+body {
+  overflow: hidden;
+}
+
+</style>
+</head>
+<script>
+$('#play').click(function() {
+  isPaused = !isPaused;
+  if (isPaused) {
+    $('#play').text('Play')
+    soundTrack.pause()
+  } else {
+    $('#play').text('Pause')
+    soundTrack.play()
+  }
+});
+//var camera, scene, renderer;
+//var puck;
+var isDimming = false, soundVal = 1.0, sign = 1.0;
+var isPaused = true;
+//////////////////
+var camera, scene, renderer;
+var k = 10;//放大倍數
+var opc = 0.5;
+var rolesRound = 0;
+var head, torso;
+var rightUpperArm, rightLowerArm, leftUpperArm, leftLowerArm;
+var rightUpperLeg, rightLowerLeg, leftUpperLeg, leftLowerLeg;
+
+var gcontrol;
+///////
+var rightArmG1 = 0,
+  rightArmG2 = 0,
+  leftArmG1 = 0,
+  leftArmG2 = 0,
+  rightLegG1 = 0,
+  rightLegG2 = 0,
+  leftLegG1 = 0,
+  leftLegG2 = 0;
+var pose1 = {
+	rightArmG1: -0.5,
+  rightArmG2: 0.395,
+  leftArmG1: 0.5,
+  leftArmG2: 0.1,
+  rightLegG1: 0.352,
+  rightLegG2: 0,
+  leftLegG1: -0.8,
+  leftLegG2: 0.8
+}
+var pose2 = {
+	rightArmG1: 0.5,
+  rightArmG2: 0.1,
+  leftArmG1: -0.5,
+  leftArmG2: 0.395,
+  rightLegG1: -0.8,
+  rightLegG2: 0.8,
+  leftLegG1: 0.352,
+  leftLegG2: 0
+}
+var keys = [
+  [0, pose1],
+  [0.5, pose2],
+  [1, pose1]
+];
+//133.93/60= 2.232
+var T = 2.232;
+var clock = new THREE.Clock();
+var ts = clock.getElapsedTime();
+var intKey = [];
+///////
+$('#switch').click ( function () {
+	useGyro = !useGyro;
+  if (useGyro) $('#switch').text ('changeGyroMode')
+  else $('#switch').text ('changeNormalMode')
+})
+////
+function toggle() {
+	isDimming = !isDimming;
+	sign = isDimming ? -1 : 1;
+}
+/////
+init();
+animate();
+
+function init() {
+
+  scene = new THREE.Scene();
+
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x888888);
+  document.body.appendChild(renderer.domElement);
+
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 2200);
+  camera.position.z = 500;
+  let controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+  ////////////////////////////////////////////////////////////////
+  //var gridXZ = new THREE.GridHelper(500, 20, 'red', 'white');
+  //scene.add(gridXZ);
+  var floor = new THREE.Mesh(new THREE.PlaneGeometry(500, 500, 5, 5), new THREE.MeshPhongMaterial(
+  {
+    color: 0xB52F3C,
+    transparent: false,
+    opacity: 0.3,
+    side: THREE.DoubleSide
+  }));
+  scene.add(floor);
+  floor.rotation.x = -Math.PI/2;
+////////////////
+	mine = new THREE.Group();
+	head = makeHead();
+    torso = makeTorso();
+	mine.add (head, torso);
+    head.position.y = 7.57*k;
+    torso.position.y = 4.09*k;
+  
+	//x左右,y上下,z前後
+	
+	//create rightArm
+	rightUpperArm = makeRightArm();
+    rightLowerArm = makeRightArm();
+	mine.add (rightUpperArm);
+	//mine.add (rightLowerArm);
+    rightUpperArm.position.set (-2.52*k+0.62*k, 7.57*k, 0);
+	rightLowerArm.position.set (1.91*k, 0*k, 0);
+    scene.add (mine);
+	rightUpperArm.add(rightLowerArm);
+	//endCreateLightArm
+
+	//
+	//create leftArm
+    leftUpperArm = makeLeftArm();
+	leftLowerArm = makeLeftArm();
+    mine.add (leftUpperArm);
+    leftUpperArm.position.set (1.26*k+0.62*k, 7.57*k, 0);
+	leftLowerArm.position.set (1.91*k, 0*k, 0);
+    scene.add (mine);
+	leftUpperArm.add(leftLowerArm);
+	//endCreateLeftArm
+	//create rightLeg
+    rightUpperLeg = makeRightLeg();
+	rightLowerLeg = makeRightLeg();
+	
+    rightUpperLeg.position.set (-0.63*k, 4.09*k, 0);
+	rightLowerLeg.position.set (2.045*k, 0, 0);
+    mine.add (rightUpperLeg);
+	scene.add (mine);
+	rightUpperLeg.add(rightLowerLeg);
+	//endCreateRightLeg
+	//create leftLeg
+	leftUpperLeg = makeLeftLeg();
+	leftLowerLeg = makeLeftLeg();
+	leftUpperLeg.position.set(0.63*k, 4.09*k, 0);
+	leftLowerLeg.position.set (2.045*k, 0, 0);
+	mine.add (leftUpperLeg);
+	scene.add (mine);
+	leftUpperLeg.add(leftLowerLeg);
+	//endCreateLeftLeg
+	////////
+	rightUpperArm.rotation.z = Math.PI*3/2;
+	rightUpperArm.rotation.x = Math.PI;
+	//rightLowerArm.rotation.z = Math.PI/2;
+	leftUpperArm.rotation.z = -Math.PI/2;
+	leftUpperArm.rotation.x = -Math.PI;
+	//
+    rightUpperLeg.rotation.z = -Math.PI/2;
+    //rightLowerLeg.rotation.x = Math.PI;
+	
+	
+	leftUpperLeg.rotation.z = -Math.PI/2;
+	//leftUpperLeg.rotation.x = Math.PI;
+	//leftLowerLeg.rotation.y = -Math.PI/2;
+	////////
+    rightUpperArm.rotation.order = 'ZYX';
+	rightLowerArm.rotation.order = 'ZYX';
+	leftUpperArm.rotation.order = 'ZYX';
+	leftLowerArm.rotation.order = 'ZYX';
+	//
+    rightUpperLeg.rotation.order = 'ZYX';
+	leftUpperLeg.rotation.order = "ZYX";
+	
+	
+	
+	////////////////////////
+	//gcontrol setting
+	gcontrol = {
+    rightArmG1: 0.01,
+    rightArmG2: 0.01,
+		leftArmG1: 0.01,
+		leftArmG2: 0.01,
+		rightLegG1:0.01,
+		rightLegG2:0,
+		leftLegG1:0.01,
+		leftLegG2:0,
+    };
+	
+	//{load:loadJSON(), preset:'walk1'}
+	var gui = new dat.GUI();
+    gui.domElement.id = 'gui';
+}
+//make Arm
+
+//make Upper Arm
+function makeRightArm() {
+  var group = new THREE.Group();
+  var mat = new THREE.MeshNormalMaterial({transparent:true, opacity:opc});
+  var body = new THREE.Mesh (new THREE.BoxGeometry(1.91*k, 1.24*k, 1.24*k), mat);
+  
+  group.add (body);
+  body.position.x = 1.91*k/2;
+  group.add (new THREE.AxesHelper (k));
+  return group;
+}
+//endMakeRightArm
+//make Lower Arm
+function makeLeftArm() {
+  var group = new THREE.Group();
+  var mat = new THREE.MeshNormalMaterial({transparent:true, opacity:opc});
+  var body = new THREE.Mesh (new THREE.BoxGeometry(1.91*k, 1.24*k, 1.24*k), mat);
+  
+  group.add (body);
+  body.position.x = 1.91*k/2;
+  group.add (new THREE.AxesHelper (k));
+  return group;
+}
+//fuction for make Leg
+//make rightLeg
+function makeRightLeg() {
+  var group = new THREE.Group();
+  var mat = new THREE.MeshNormalMaterial({transparent:true, opacity:opc});
+  var body = new THREE.Mesh (new THREE.BoxGeometry(2.045*k, 1.26*k, 1.26*k), mat);
+  
+  group.add (body);
+  body.position.x = 2.045*k/2;
+  group.add (new THREE.AxesHelper (k));
+  return group;
+}
+//make leftLeg
+function makeLeftLeg() {
+  var group = new THREE.Group();
+  var mat = new THREE.MeshNormalMaterial({transparent:true, opacity:opc});
+  var body = new THREE.Mesh (new THREE.BoxGeometry(2.045*k, 1.26*k, 1.26*k), mat);
+  
+  group.add (body);
+  body.position.x = 2.045*k/2;
+  group.add (new THREE.AxesHelper (k));
+  return group;
+}
+
+function makeHead() {
+  var headGroup = new THREE.Group();
+  var mat = new THREE.MeshNormalMaterial({transparent:true, opacity:opc});
+  var headBody = new THREE.Mesh (new THREE.BoxGeometry(2.52*k, 2.52*k, 2.52*k), mat);
+  
+  headGroup.add (headBody);
+  headBody.position.y = 2.52*k/2;
+  headGroup.add (new THREE.AxesHelper (k));
+  return headGroup;
+}
+
+function makeTorso () {
+  var group = new THREE.Group();
+  var mat = new THREE.MeshNormalMaterial({transparent:true, opacity:opc});
+  var body = new THREE.Mesh (new THREE.BoxGeometry(2.52*k, 3.48*k, 1.26*k), mat);
+  
+  group.add (body);
+  body.position.y = 3.48*k/2;
+  group.add (new THREE.AxesHelper (2*k));
+  return group;
+}
+
+function keyframe(t) {
+  var s = ((t - ts) % T) / T;
+
+  for (var i = 1; i < keys.length; i++) {
+    if (keys[i][0] > s) break;
+  }
+  // take i-1
+  var ii = i - 1;
+  var a = (s - keys[ii][0]) / (keys[ii + 1][0] - keys[ii][0]);
+	//Arm
+  intKey = [keys[ii][1].rightArmG1 * (1 - a) + keys[ii + 1][1].rightArmG1 * a,
+            keys[ii][1].rightArmG2 * (1 - a) + keys[ii + 1][1].rightArmG2 * a
+  ];
+  intKey2 = [keys[ii][1].leftArmG1 * (1 - a) + keys[ii + 1][1].leftArmG1 * a,
+             keys[ii][1].leftArmG2 * (1 - a) + keys[ii + 1][1].leftArmG2 * a
+  ];
+  //Leg
+  intKey3 = [keys[ii][1].rightLegG1 * (1 - a) + keys[ii + 1][1].rightLegG1 * a,
+             keys[ii][1].rightLegG2 * (1 - a) + keys[ii + 1][1].rightLegG2 * a
+  ];
+	
+  intKey4 = [keys[ii][1].leftLegG1 * (1 - a) + keys[ii + 1][1].leftLegG1 * a,
+             keys[ii][1].leftLegG2 * (1 - a) + keys[ii + 1][1].leftLegG2 * a
+  ];
+}
+
+function animate() {
+	//head.rotation.y = Math.PI/6;
+	keyframe(clock.getElapsedTime());
+	
+    rightUpperArm.rotation.y = intKey[0];//gcontrol.rightArmG1;//-Math.PI/4;
+	rightLowerArm.rotation.y = intKey[1];//gcontrol.rightArmG2;
+	leftUpperArm.rotation.y = intKey2[0];//gcontrol.leftArmG1;//Math.PI/4;
+	leftLowerArm.rotation.y = intKey2[1];//gcontrol.leftArmG2;
+	//
+	//
+    rightUpperLeg.rotation.y = intKey3[0];//gcontrol.rightLegG1;//Math.PI/4;
+	rightLowerLeg.rotation.y = intKey3[1];//gcontrol.rightLegG2;
+    leftUpperLeg.rotation.y = intKey4[0];//gcontrol.leftLegG1;//-Math.PI/4;
+	leftLowerLeg.rotation.y =  intKey4[1];//gcontrol.leftLegG2;
+	//
+	//var d = Math.PI/6;
+	var h = 0;
+	rolesRound -= 0.009;
+	mine.position.set(90*Math.cos(rolesRound), h, -90*Math.sin(rolesRound));
+	mine.rotation.y = Math.PI/32 + rolesRound;
+	camera.lookAt(mine.position);
+	//
+	//
+  requestAnimationFrame(animate);
+  render();
+
+}
+
+function render() {
+
+  renderer.render(scene, camera);
+
+}
+
+
+//////////////////
+</script>
+</body>
+</html>
