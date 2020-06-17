@@ -1,0 +1,470 @@
+<html>
+<head>
+<style>
+#info {
+  position: absolute;
+  top: 1%;
+  width: 100%;
+  padding: 10px;
+  text-align: center;
+  color: #ffee12;
+}
+
+body {
+  overflow: hidden;
+}
+</style>
+</head>
+<body>
+<div id="info">Texture Mapping with TextureLoader
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js">
+</script>
+<!-- three.js library -->
+<script src='../examples/vendor/three.js/build/three.min.js'></script>
+<script src="../examples/vendor/three.js/examples/js/libs/stats.min.js"></script>
+<!-- ar.js -->
+<script src="../build/ar.js"></script>
+<script>THREEx.ArToolkitContext.baseURL = '../'</script>
+<script src="https://rawgit.com/jyunming-chen/tutsplus/master/js/text2D.js"></script>
+<script src='https://github.com/mrdoob/three.js/blob/master/src/geometries/PlaneGeometry.js'></script>
+<script src="../examples/vendor/three.js/examples/js/libs/stats.min.js"></script>
+<div id="info">Texture Mapping with TextureLoader
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.min.js"></script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js">
+</script>
+<!-- three.js library -->
+<script src='../examples/vendor/three.js/build/three.min.js'></script>
+<script src="../examples/vendor/three.js/examples/js/libs/stats.min.js"></script>
+<!-- ar.js -->
+<script src="../build/ar.js"></script>
+<script type="x-shader/x-fragment" id="fragmentShaderDepth">
+    uniform sampler2D texture;
+    varying vec2 vUv;
+
+    vec4 pack_depth(const in float depth) {
+        const vec4 bit_shift = vec4(256.0 * 256.0 * 256.0, 256.0 * 256.0, 256.0, 1.0);
+        const vec4 bit_mask = vec4(0.0, 1.0 / 256.0, 1.0 / 256.0, 1.0 / 256.0);
+        vec4 res = fract(depth * bit_shift);
+        res -= res.xxyz * bit_mask;
+        return res;
+    }
+
+    void main() {
+        vec4 pixel = texture2D(texture, vUv);
+        if (pixel.a < 0.5) discard;
+        gl_FragData[0] = pack_depth (gl_FragCoord.z);
+    }
+</script>
+<script type="x-shader/x-vertex" id="vertexShaderDepth">
+    varying vec2 vUv;
+
+    void main() {
+        vUv = uv;
+        gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+    }
+</script>
+<script>
+
+// global variables
+var renderer, scene, camera;
+var stats;
+var markerKanji, markerHiro;
+var arToolKitSource, arToolKitContext;
+
+var raycaster, pickables;
+var showHiro = false;
+var _iOSDevice;
+var cube;
+var angle = 0;
+
+init();
+animate();
+
+function init() {
+  
+  let _iOSDevice = !!navigator.platform.match(/iPhone|iPod|iPad/);
+
+	console.log ('iOS: ' + _iOSDevice)
+
+
+	// init renderer
+	renderer	= new THREE.WebGLRenderer({
+		// antialias	: true,
+		alpha: true
+	});
+	renderer.setClearColor(new THREE.Color('lightgrey'), 0)
+	// renderer.setPixelRatio( 1/2 );
+	renderer.setSize( window.innerWidth, window.innerHeight );
+	renderer.domElement.style.position = 'absolute'
+	renderer.domElement.style.top = '0px'
+	renderer.domElement.style.left = '0px'
+	document.body.appendChild( renderer.domElement );
+
+	// init scene and camera
+	scene	= new THREE.Scene();
+	
+	//////////////////////////////////////////////////////////////////////////////////
+	//		Initialize a basic camera
+	//////////////////////////////////////////////////////////////////////////////////
+
+	// Create a camera
+	camera = new THREE.Camera();
+	scene.add(camera);
+
+	////////////////////////////////////////////////////////////////////////////////
+	//          handle arToolkitSource
+	////////////////////////////////////////////////////////////////////////////////
+
+	arToolkitSource = new THREEx.ArToolkitSource({
+		// to read from the webcam 
+		sourceType : 'webcam',
+
+		// to read from an image
+		// sourceType : 'image',
+		// sourceUrl : THREEx.ArToolkitContext.baseURL + '../data/images/img.jpg',		
+
+		// to read from a video
+		// sourceType : 'video',
+		// sourceUrl : THREEx.ArToolkitContext.baseURL + '../data/videos/headtracking.mp4',		
+	})
+
+	arToolkitSource.init(function onReady(){
+		onResize()
+	})
+	
+	// handle resize
+	window.addEventListener('resize', function(){
+		onResize()
+	})
+	function onResize(){
+		arToolkitSource.onResize()	
+		arToolkitSource.copySizeTo(renderer.domElement)	
+		if( arToolkitContext.arController !== null ){
+			arToolkitSource.copySizeTo(arToolkitContext.arController.canvas)	
+		}	
+	}
+	////////////////////////////////////////////////////////////////////////////////
+	//          initialize arToolkitContext
+	////////////////////////////////////////////////////////////////////////////////
+	
+	arToolkitContext = new THREEx.ArToolkitContext({
+		cameraParametersUrl: THREEx.ArToolkitContext.baseURL + '../data/data/camera_para.dat',
+		detectionMode: 'mono',
+		maxDetectionRate: 30,
+		canvasWidth: 80*3,
+		canvasHeight: 60*3,
+	})
+	// initialize it
+	arToolkitContext.init(function onCompleted(){
+		// copy projection matrix to camera
+		camera.projectionMatrix.copy( arToolkitContext.getProjectionMatrix() );
+	})
+
+	markerKanji = addMarkerKanji();
+	scene.add (markerKanji);
+	markerHiro = addMarkerHiro();
+	scene.add (markerHiro); // hide at first
+	
+	
+	stats = new Stats();
+	document.body.appendChild( stats.dom );
+	
+	
+	
+	///////////////////////////////////////////////////////
+  renderer = new THREE.WebGLRenderer();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setClearColor(0x888888);
+  renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  document.body.appendChild(renderer.domElement);
+
+	//scene = new THREE.Scene();
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+  camera.position.z = 200;
+  let controls = new THREE.OrbitControls(camera, renderer.domElement);
+  
+  /////////////////////////////////////////////////////////////////////
+  let loader = new THREE.TextureLoader();
+  loader.crossOrigin = '';
+  var texture, texture2;
+  //圖片
+  texture = loader.load('https://lh3.googleusercontent.com/proxy/gdYx0I2feMYfbkBooCEcCsjVKbgzg02lUokbJQBXej6R_Cu8-K1iJsJnNTYs1APHYTaedUpo5BT-V6zKHyt8OHN0mz6Ay5Xd58qpsPd0QtHs-U8cYtroJS4');
+  texture2 = loader.load('https://images.squarespace-cdn.com/content/v1/5c77bf2e01232c0654aed863/1557736316199-JSUPHJNHYOJFXW7VY40M/ke17ZwdGBToddI8pDm48kOjXzUddLjA_L0N8xpThWbN7gQa3H78H3Y0txjaiv_0fDoOvxcdMmMKkDsyUqMSsMWxHk725yiiHCCLfrh8O1z5QPOohDIaIeljMHgDF5CVlOqpeNLcJ80NK65_fV7S1UVUNgOtnj_x3A3yiDq8_CDRaEaeg18q_H9knET1-WhjEngG2yUwjuGklw08Log3rag/toybrains.com_tw_toy_museum14.jpg');
+	var texMat = new THREE.MeshBasicMaterial({
+    map: texture,
+    alphaTest: 0.5,
+    side:THREE.DoubleSide
+  });
+  
+  var texMat2 = new THREE.MeshBasicMaterial({
+    map: texture2,
+    alphaTest: 0.5,
+    side:THREE.DoubleSide
+  });
+   //圖片大小
+  var hulk = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), texMat);
+	hulk.position.set(-25, 0, 0);
+  scene.add(hulk);
+  
+  var hulk2 = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), texMat2);
+  hulk2.position.set(25, 0, 0);
+	scene.add(hulk2);
+  
+  
+//1
+  var uniforms = {
+        texture: {
+            type: "t",
+            value: texture
+        }
+      };     
+//2
+var uniforms2 = {
+        texture: {
+            type: "t2",
+            value: texture2
+        }
+      };
+      
+  var vertexShader = document.getElementById('vertexShaderDepth').textContent;
+  var fragmentShader = document.getElementById('fragmentShaderDepth').textContent;
+//1
+  hulk.customDepthMaterial = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader
+    });
+//2
+  hulk2.customDepthMaterial = new THREE.ShaderMaterial({
+        uniforms: uniforms2,
+        vertexShader: vertexShader,
+        fragmentShader: fragmentShader
+    });
+
+//背景
+  cube = new THREE.PlaneGeometry( 100, 100, 1 );
+  //scene.add(cube);
+  //cube.position.z = -120
+  var textureLoader = new THREE.TextureLoader();
+  var texture3 = textureLoader.load('https://lh6.ggpht.com/ttu.design/SECrCElByRI/AAAAAAAAAXU/LL8OlrhJhvg/s400/ttu%20campaus.jpg');
+var texMatpla = new THREE.MeshPhongMaterial({
+      map: texture3,
+      alphaTest: 0.7,
+      side:THREE.DoubleSide
+    });
+    var plane = new THREE.Mesh( cube, texMatpla );
+    scene.add(plane);
+    plane.position.set(0, 20, -30);
+
+  hulk.castShadow = true;
+  hulk2.castShadow = true;
+  plane.castShadow = true;
+  plane.receiveShadow = true;
+  texture3.castShadow = true;
+  texture3.receiveShadow = true;
+ /*   cube.traverse (
+   function (mesh) {
+     if (mesh instanceof THREE.Mesh) {
+       mesh.castShadow = true;
+        mesh.receiveShadow = true;
+      }
+    }
+  );*/
+  
+  //////////////
+    let spotLight = new THREE.SpotLight(0xffffff, 1.3);
+    spotLight.position.set(0, 50, 200);
+    spotLight.angle = Math.PI / 3;
+
+    spotLight.castShadow = true;
+
+    spotLight.shadow.mapSize.width = 1024;
+    spotLight.shadow.mapSize.height = 1024;
+
+    spotLight.shadow.camera.near = 30;
+    spotLight.shadow.camera.far = 4000;
+    spotLight.shadow.camera.fov = spotLight.angle / Math.PI * 180;
+
+    spotLight.exponent = 20;
+    spotLight.target = hulk;
+    scene.add(spotLight);
+
+		//scene.add (new THREE.SpotLightHelper (spotLight))
+    scene.add ( new THREE.CameraHelper (spotLight.shadow.camera) );
+    ////////////////////////
+    let spotLight2 = new THREE.SpotLight(0xffffff, 1.3);
+    spotLight2.position.set(0, 50, 200);
+    spotLight2.angle = Math.PI / 3;
+
+    spotLight2.castShadow = true;
+
+    spotLight2.shadow.mapSize.width = 1024;
+    spotLight2.shadow.mapSize.height = 1024;
+
+    spotLight2.shadow.camera.near = 30;
+    spotLight2.shadow.camera.far = 4000;
+    spotLight2.shadow.camera.fov = spotLight2.angle / Math.PI * 180;
+
+    spotLight2.exponent = 20;
+    spotLight2.target = hulk2;
+    scene.add(spotLight2);
+
+		//scene.add (new THREE.SpotLightHelper (spotLight))
+    scene.add ( new THREE.CameraHelper (spotLight2.shadow.camera) );
+    
+    ////////////////////////////////////////////////////////
+	// picker
+	if (_iOSDevice)
+		window.addEventListener('touchstart', onTouchStart, false) 
+	else
+		window.addEventListener ('mousedown', onMouseDown, false);
+	raycaster = new THREE.Raycaster();
+	pickables = [markerKanji];	
+}
+function onTouchStart (event) {
+	console.log ('in touch start')
+
+   if (event.touches.length == 1) {
+        
+		event.preventDefault();
+		let ndcX = ( event.touches[0].pageX / window.innerWidth ) * 2 - 1;
+		let ndcY = - ( event.touches[0].pageY / window.innerHeight ) * 2 + 1;
+	
+		doToggleHiro (ndcX, ndcY);		
+		
+	}	
+}	
+	
+function doToggleHiro (ndcX, ndcY) {
+  	//raycaster.ray.origin.setFromMatrixPosition( camera.matrixWorld );
+	raycaster.ray.origin.set (0,0,0)
+	raycaster.ray.direction.set( ndcX, ndcY, 0.5 ).unproject( camera ).sub( raycaster.ray.origin ).normalize();
+			
+  	var intersects = raycaster.intersectObjects(pickables, true);
+  	if (intersects.length > 0) {
+  		console.log ('toggle showHiro');
+ 	
+ 		showHiro = !showHiro;
+  			
+	}
+	if (showHiro) {
+		scene.add (markerHiro)
+	} else {
+		scene.remove (markerHiro)
+	}
+
+}
+
+function onMouseDown (event) {
+	event.preventDefault();
+  	let ndcX = (event.clientX / window.innerWidth) * 2 - 1;
+  	let ndcY = -(event.clientY / window.innerHeight) * 2 + 1;
+
+	doToggleHiro (ndcX, ndcY)  	
+}
+
+	
+function addMarkerKanji () {
+	let markerRootKanji = new THREE.Group();
+	var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRootKanji, {
+		type : 'pattern',
+		 patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/patt.kanji'
+	})
+
+	var geometry	= new THREE.PlaneGeometry(1,1);
+		
+	let loader = new THREE.TextureLoader();
+	loader.setCrossOrigin('')
+	let texture = loader.load( 'https://i.imgur.com/J0RenHB.png' );
+	//let texture = loader.load( 'https://i.imgur.com/oRYPJ5X.png' );
+	
+	let material = new THREE.MeshBasicMaterial( { 
+		map: texture,
+		transparent: true,
+		side: THREE.DoubleSide
+		} );
+
+	let mesh	= new THREE.Mesh( geometry, material );
+	mesh.position.y	= geometry.parameters.height/2
+	//mesh.position.z = 0.5;
+	
+	markerRootKanji.add (mesh);
+
+let cube = new THREE.Mesh (new THREE.BoxGeometry (3,2,1), new THREE.MeshNormalMaterial())
+markerRootKanji.add (cube)
+cube.position.z = -5;
+//cube.rotation.y = Math.PI/3
+
+	/// add gridhelper
+	var gridXZ = new THREE.GridHelper(1,10);
+	//markerRootKanji.add (gridXZ);
+	
+	return markerRootKanji;
+}
+
+function addMarkerHiro(){
+	let markerRoot = new THREE.Group()
+
+	var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
+		type : 'pattern',
+		patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/patt.hiro'
+	})
+
+	// add a torus knot	
+	var geometry	= new THREE.TorusKnotGeometry(0.3,0.1,64,16);
+	var material	= new THREE.MeshNormalMaterial();
+	var mesh	= new THREE.Mesh( geometry, material );
+	mesh.position.y	= 0.5
+	
+	markerRoot.add (mesh);
+		
+	return markerRoot;
+}	
+
+
+function animate() {
+	requestAnimationFrame (animate);
+	
+	if( arToolkitSource.ready === false )	return
+	arToolkitContext.update( arToolkitSource.domElement )
+
+	if (showHiro) {
+		markerHiro.children[0].rotation.x += 0.1;
+	}
+	
+	renderer.render (scene, camera);
+	stats.update();
+	
+	// billboard of Hulk
+	// camera at eye coord: (0,0,0)
+	// corresponding marker coordinate:
+	let p0 = new THREE.Vector3 (0,0,0)
+	let mw = new THREE.Matrix4();		
+	p0.applyMatrix4 (mw.getInverse(markerKanji.matrixWorld));
+
+	p0.y = 0;
+	let front = new THREE.Vector3(0,0,1);
+	let angle = p0.angleTo (front);
+	let axis = new THREE.Vector3();
+	axis.crossVectors ( front, p0 ).normalize();
+	if (axis.y > 0)  // 0, 1, 0
+		markerKanji.children[0].rotation.y = angle;
+	else 
+		markerKanji.children[0].rotation.y = -angle;
+			
+}
+
+function render() {
+  renderer.render(scene, camera);
+}
+
+
+</script>
+
+</body>
+</html>
