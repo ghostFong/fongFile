@@ -58,8 +58,8 @@ Minimal Version
 var renderer, scene, camera;
 var stats;
 var arToolKitSource, arToolKitContext;
-var markerHiro;
-
+var markerHiro, markerRoot;
+var plane, plane1, plane2;
 
 init();
 animate();
@@ -124,6 +124,7 @@ function init() {
 		canvasWidth: 80*3,
 		canvasHeight: 60*3,
 	})
+	
 	// initialize it
 	arToolkitContext.init(function onCompleted(){
 		// copy projection matrix to camera
@@ -136,15 +137,19 @@ function init() {
 }
 	
 function addMarkerHiro(){
-	let markerRoot = new THREE.Group();
-
+	markerRoot = new THREE.Group();
+	
 	var artoolkitMarker = new THREEx.ArMarkerControls(arToolkitContext, markerRoot, {
 		type : 'pattern',
-		patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/patt.hiro'
+		patternUrl : THREEx.ArToolkitContext.baseURL + '../data/data/patt.yo'
 	})
-
+	scene.add(markerRoot);
+	
+	
+	let w = new THREE.Group();
+	markerRoot.add(w);
 	// add a torus knot & a transparent box	
-	cube = new THREE.PlaneGeometry( 15, 8, 32 );
+	
 	//markerRoot1 = 
 	
     //scene.add(cube);
@@ -157,11 +162,13 @@ function addMarkerHiro(){
       alphaTest: 0.5,
       side:THREE.DoubleSide
     });
-    let plane = new THREE.Mesh( cube, texMatpla );
+    
+    cube = new THREE.PlaneGeometry( 15, 8, 32 );
+    plane = new THREE.Mesh( cube, texMatpla );
     //scene.add(plane);
     plane.position.set(0, 4, -1);
     plane.receiveShadow = true;
-    markerRoot.add(plane);
+    w.add(plane);
 	//////////////////////////////////////////////////////////////
 	var loader = new THREE.TextureLoader();
 	loader.crossOrigin = '';
@@ -173,10 +180,10 @@ function addMarkerHiro(){
     });
     
     
-    var geometry1 = new THREE.PlaneGeometry( 2, 1, 32 );
-    var plane1 = new THREE.Mesh( geometry1, texMatpla1 );
+    var geometry1 = new THREE.PlaneGeometry( 2, 3, 32 );
+    plane1 = new THREE.Mesh( geometry1, texMatpla1 );
     
-    plane1.position.set(-3, 1, 0.5);
+    plane1.position.set(-1, 1.5, 0.5);
 	//////////////////////////////////////////////////////////////////////////////
     var uniforms = {
         texture: {
@@ -192,7 +199,7 @@ function addMarkerHiro(){
           fragmentShader: fragmentShader
     });
     plane1.castShadow = true;
-    markerRoot.add( plane1 );
+    w.add( plane1 );
   
     //////////////////////////////////////////////////////////////////////////////
 
@@ -207,9 +214,9 @@ function addMarkerHiro(){
       side:THREE.DoubleSide
     });
 	
-    var geometry2 = new THREE.PlaneGeometry( 2, 5, 32 );
-    var plane2 = new THREE.Mesh( geometry2, texMat );
-    plane2.position.set(3, 3, 0.7);
+    var geometry2 = new THREE.PlaneGeometry( 2, 4, 32 );
+    plane2 = new THREE.Mesh( geometry2, texMat );
+    plane2.position.set(2, 2, 0.5);
     
     //plane_me.receiveShadow = true;
     //////////////////////////////////////////////////////////////////////////////
@@ -227,7 +234,26 @@ function addMarkerHiro(){
           fragmentShader: fragmentShader
     });
     plane2.castShadow = true;
-    markerRoot.add( plane2 );
+    w.add( plane2 );
+    //////////////////////////////////////////////////////////////////////////////////
+	//		videoTexture
+	//////////////////////////////////////////////////////////////////////////////////
+	
+	
+	if( arToolkitSource.domElement.nodeName === 'VIDEO' ){
+		var videoTexture = new THREE.VideoTexture(arToolkitSource.domElement)
+	}else if( arToolkitSource.domElement.nodeName === 'IMG' ){
+		var videoTexture = new THREE.Texture(arToolkitSource.domElement)
+		videoTexture.needsUpdate = true		
+	}else console.assert(false)
+	videoTexture.minFilter =  THREE.NearestFilter;
+
+
+	//////////////////////////////////////////////////////////////////////////////
+	//		markerCloak
+	//////////////////////////////////////////////////////////////////////////////
+	var markerCloak =  new THREEx.ArMarkerCloak(videoTexture);
+	markerRoot.add(markerCloak.object3d)
     ///////////////////////////////////////////////////
   
   //////////////
@@ -245,7 +271,7 @@ function addMarkerHiro(){
     spotLight.shadow.camera.fov = spotLight.angle / Math.PI * 180;
     spotLight.exponent = 2;
     spotLight.target = plane1;
-    markerRoot.add(spotLight);
+    w.add(spotLight);
     
     
     ////////
